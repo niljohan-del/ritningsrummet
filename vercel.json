@@ -4,5 +4,12 @@
   "outputDirectory": "web",
   "installCommand": "echo inga beroenden",
   "framework": null,
-  "cleanUrls": true
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/app",
+      "destination": "/app/",
+      "permanent": false
+    }
+  ]
 }
