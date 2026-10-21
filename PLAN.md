@@ -188,30 +188,37 @@ Så: etapp 2 kan göras här. Etapp 3 och framåt i Claude Code, i
 
 ---
 
-## Publicering på Vercel — blockerad, två sätt att lösa
+## Publicering
 
-Försökt 2026-10-21. Vercel-kopplingen kan **läsa** (den listar dina projekt) men
-nekar skrivning: både `POST /v11/projects` och `POST /v13/deployments` ger
+**GitHub: klart.** Projektet ligger på
+`github.com/niljohan-del/ritningsrummet`, pushat till `main` 2026-10-21.
+Baseline och byggresultat är utanför git enligt `.gitignore`.
+
+**Vercel: återstår ett klick från dig.** Kopplingen kan läsa dina projekt men
+nekar all skrivning — `POST /v11/projects` och `POST /v13/deployments` ger båda
 403 med `"remediation": {"actor": "user", "action": "grant_team_access"}`.
+Testat tre gånger, det är ingen tillfällig miss.
 
-Dessutom: filinnehåll måste passera genom verktygsanropet, och containern har
-ingen nätåtkomst till vercel.app — jag kan alltså varken skicka upp 22 MB eller
-kontrollera efteråt att en uppladdning blev rätt. Att skicka 26 KB kod blint,
-utan möjlighet att verifiera, vore samma sorts obevisade leverans som resten av
-projektet går ut på att undvika.
+Enklast: gå till **vercel.com/new** och importera repot. `vercel.json` ligger
+redan i det och sätter byggkommando och utkatalog, så det ska inte behövas
+några inställningar. Alternativt ger du MCP-kopplingen skrivåtkomst till scopen
+`niljohan-7752`, så gör jag det åt dig.
 
-**Väg A, bäst: skapa repot `niljohan-del/ritningsrummet` på GitHub.**
-Då pushar jag hela projektet med git — ingen storleksgräns, ingen risk för
-avskriftsfel — och Vercel kopplas till repot så varje push deployar automatiskt.
-Det är också den uppsättning ett riktigt projekt ska ha. Sessionen har redan
-push-rättigheter till dina befintliga repon; det som saknas är att repot finns.
+Sidan som publiceras är `web/` — en statussida plus körspårskontrollen, som
+byggs av `tools/build-korsparskontroll.mjs` vid varje deploy.
 
-**Väg B: ge Vercel-kopplingen skrivåtkomst** till scopen `niljohan-7752`.
-Löser deployen men inte storleksproblemet — huvudverktyget på 22 MB kan ändå
-inte skickas den vägen.
+**Den lokala mappen är inte en git-klon.** `C:\Dev\ritningsrummet` har fyllts
+genom filöverföring, inte genom `git clone`, så den saknar `.git`. Första gången
+du öppnar Claude Code där bör mappen kopplas till repot:
 
-Statussidan ligger färdig i `web/index.html`, kontrollerad i både bred och smal
-vy. Den går upp så snart någon av vägarna är öppen.
+```
+git init
+git remote add origin https://github.com/niljohan-del/ritningsrummet
+git fetch origin
+git reset origin/main
+```
+
+Då blir baseline och dist kvar på disk medan spårade filer matchar repot.
 
 ## Beslut jag behöver från dig
 
