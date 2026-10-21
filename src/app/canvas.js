@@ -88,5 +88,5 @@ const missing=k=>Error('En inbyggd komponent saknas: '+k);
 const assetPath=k=>'vendor/'+(ASSET_FILE[k]||k);
 const assetBytes=async k=>{if(ASSET_MAP){if(!ASSET_MAP[k])throw missing(k);return decode64(ASSET_MAP[k]);}const r=await fetch(assetPath(k));if(!r.ok)throw missing(k);return new Uint8Array(await r.arrayBuffer());};
 const assetText=async k=>new TextDecoder().decode(await assetBytes(k));
-const assetURL=k=>{if(!ASSET_MAP)return assetPath(k);if(!ASSET_MAP[k])throw missing(k);return URL.createObjectURL(new Blob([decode64(ASSET_MAP[k])],{type:'text/javascript'}));};
+const assetURL=k=>{if(!ASSET_MAP)return new URL(assetPath(k),document.baseURI).href;if(!ASSET_MAP[k])throw missing(k);return URL.createObjectURL(new Blob([decode64(ASSET_MAP[k])],{type:'text/javascript'}));};
 let pdfLibrary=null,pdfLibLibrary=null,ocrWorker=null,ocrSeq=0;const ocrJobs=new Map();
