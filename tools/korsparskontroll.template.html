@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Körspårskontroll · ledade fordon</title>
+<style>
+:root{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#182f40;background:#eef2f5;
+  --ink:#182f40;--muted:#627483;--line:#dce4ea;--blue:#1765ce;--navy:#142634;--orange:#b96409;--green:#087e66}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;display:flex;flex-direction:column}
+header{background:var(--navy);color:#fff;padding:13px 20px;display:flex;align-items:baseline;gap:14px}
+header h1{font-size:1.05rem;font-weight:650;margin:0}
+header span{font-size:.75rem;color:#a7becf;letter-spacing:.1em}
+main{flex:1;display:grid;grid-template-columns:286px minmax(0,1fr);min-height:0}
+@media(max-width:820px){main{grid-template-columns:1fr}}
+.panel{background:#fff;border-right:1px solid var(--line);padding:18px;overflow:auto}
+.field{display:block;margin:0 0 15px}
+.field>span{display:block;font-size:.8125rem;color:var(--muted);margin-bottom:6px}
+select,input[type=range]{width:100%}
+select{border:1px solid #c8d3dc;border-radius:5px;padding:8px 9px;font:inherit;background:#fff;color:var(--ink)}
+input[type=range]{accent-color:var(--blue)}
+.val{font-variant-numeric:tabular-nums;font-weight:600}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;font:inherit;font-size:.8125rem;padding:8px;border:1px solid var(--line);
+  background:#fff;border-radius:5px;cursor:pointer}
+.seg button[aria-pressed=true]{background:#eaf2ff;border-color:#aec9ee;color:#155ab5;font-weight:600}
+h2{font-size:.6875rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+  margin:22px 0 10px;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:.8125rem}
+td{padding:6px 0;border-bottom:1px solid #eef1f4}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+td:first-child{color:var(--muted);font-weight:400}
+.verdict{margin-top:12px;padding:11px 13px;border-radius:6px;font-size:.8125rem;line-height:1.55}
+.verdict.ok{background:#e2f4ed;color:#0d5243;border:1px solid #b5ddd0}
+.verdict.bad{background:#fff0f0;color:#922e36;border:1px solid #f0c9ca}
+figure{margin:0;padding:18px;display:flex;flex-direction:column;min-height:0}
+canvas{flex:1;min-height:360px;background:#fff;border:1px solid var(--line);border-radius:7px;
+  width:100%;display:block}
+figcaption{font-size:.75rem;color:var(--muted);margin-top:11px;line-height:1.6}
+.key{display:inline-flex;align-items:center;gap:6px;margin-right:16px}
+.key i{width:13px;height:3px;display:inline-block;border-radius:2px}
+.note{font-size:.75rem;color:var(--muted);line-height:1.6;margin-top:18px;
+  padding-top:14px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header><h1>Körspårskontroll</h1><span>LEDADE FORDON · RITNINGSRUMMET</span></header>
+<main>
+  <div class="panel">
+    <label class="field"><span>Typfordon</span><select id="veh"></select></label>
+
+    <label class="field"><span>Styrutslag <b class="val" id="steerOut">20°</b></span>
+      <input type="range" id="steer" min="2" max="40" step="1" value="20"></label>
+
+    <label class="field"><span>Körd sträcka <b class="val" id="distOut">60 m</b></span>
+      <input type="range" id="dist" min="10" max="300" step="5" value="60"></label>
+
+    <div class="field"><span>Körriktning</span>
+      <div class="seg">
+        <button id="fwd" aria-pressed="true">Framåt</button>
+        <button id="rev" aria-pressed="false">Backning</button>
+      </div>
+    </div>
+
+    <h2>Fordonets mått</h2>
+    <table id="specs"></table>
+
+    <h2>Kontroll mot sluten form</h2>
+    <table id="check"></table>
+    <div id="verdict" class="verdict ok"></div>
+
+    <p class="note" id="srcnote"></p>
+  </div>
+
+  <figure>
+    <canvas id="c" width="1100" height="760"></canvas>
+    <figcaption>
+      <span class="key"><i style="background:#1765ce"></i>dragande enhet</span>
+      <span class="key"><i style="background:#b96409"></i>släpad enhet</span>
+      <span class="key"><i style="background:#087e66"></i>axlarnas banor</span>
+      <span class="key"><i style="background:#c3ced8"></i>svept yta</span>
+      <br>Måtten är i meter. Kontrollen jämför den simulerade släpaxelradien
+      mot <b>√(R₁² + c² − L₂²)</b>, som gäller i stationär kurva och är oberoende
+      av simuleringen.
+    </figcaption>
+  </figure>
+</main>
+
+<script>/*__RR__*/</script>
+<script>/*__VEHICLES__*/</script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const S = {x:1, y:1};                       // kontrollsidan räknar direkt i meter
+let gear = 1;
+
+const rigs = VEHICLES.filter(v => v.units && v.units.length);
+$('veh').innerHTML = rigs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+
+const nf = (n, d=2) => Number(n).toFixed(d).replace('.', ',');
+
+function build(){
+  const v = rigs.find(x => x.id === $('veh').value);
+  const steer = +$('steer').value;
+  const dist  = +$('dist').value * gear;
+  $('steerOut').textContent = steer + '°';
+  $('distOut').textContent = Math.abs(dist) + ' m';
+
+  // konstant styrutslag: bakaxeln går på en exakt cirkel, så facit gäller
+  const L = v.wheelbase;
+  const cmds = [];
+  for (let left = Math.abs(dist); left > 0; left -= 40)
+    cmds.push({ distance: Math.min(40, left) * gear, steer });
+
+  const sw = RR.attachUnits(
+    RR.simulateManeuver([{x:L,y:0},{x:L+1,y:0}], v, S, cmds), v, S);
+
+  const R1 = L / Math.tan(steer * Math.PI/180);
+  const first = sw.frames[0].rear;
+  const cx = first.x, cy = first.y + R1;
+  const last = sw.frames.at(-1).units[0];
+  const got = Math.hypot(last.axle.x - cx, last.axle.y - cy);
+  let want = null;
+  try { want = RR.steadyRadius(R1, v.units); } catch(e) { want = null; }
+
+  $('specs').innerHTML = `
+    <tr><td>Ekipagets längd</td><td>${nf(v.rigLength,1)} m</td></tr>
+    <tr><td>Dragande: axelavstånd</td><td>${nf(L,1)} m</td></tr>
+    <tr><td>Dragande: överhäng fram / bak</td><td>${nf(v.frontOverhang,1)} / ${nf(v.rearOverhang,1)} m</td></tr>
+    <tr><td>Koppling från axel</td><td>${nf(v.units[0].hitchOffset,1)} m</td></tr>
+    <tr><td>Släpad: koppling till axel</td><td>${nf(v.units[0].wheelbase,2)} m</td></tr>
+    <tr><td>Släpad: överhäng fram / bak</td><td>${nf(v.units[0].frontOverhang,1)} / ${nf(v.units[0].rearOverhang,2)} m</td></tr>
+    <tr><td>VGU vändradie / körvidd</td><td>${nf(v.vguTurningRadius,1)} / ${nf(v.vguSweptWidth,1)} m</td></tr>`;
+
+  const diff = want === null ? null : Math.abs(got - want);
+  $('check').innerHTML = `
+    <tr><td>Dragande axelns radie R₁</td><td>${nf(R1)} m</td></tr>
+    <tr><td>Simulerad släpaxelradie</td><td>${nf(got,3)} m</td></tr>
+    <tr><td>Sluten form</td><td>${want === null ? '–' : nf(want,3)+' m'}</td></tr>
+    <tr><td>Skillnad</td><td>${diff === null ? '–' : nf(diff*1000,2)+' mm'}</td></tr>
+    <tr><td>Största ledvinkel</td><td>${nf(sw.maxArticulation,1)}°</td></tr>`;
+
+  const vd = $('verdict');
+  if (gear < 0){
+    vd.className = 'verdict bad';
+    vd.textContent = 'Vid backning finns inget stationärt tillstånd — ledvinkeln växer '
+      + 'av sig själv och fordonet viker sig. Det är rätt beteende, inte ett fel, '
+      + 'så den slutna formen gäller inte här.';
+  } else if (diff !== null && diff < 0.005){
+    vd.className = 'verdict ok';
+    vd.textContent = 'Simuleringen och den slutna formen skiljer sig '
+      + nf(diff*1000,2) + ' mm. Modellen följer facit.';
+  } else {
+    vd.className = 'verdict bad';
+    vd.textContent = diff === null
+      ? 'Kurvan är för snäv för den släpade enheten; sluten form saknar lösning.'
+      : 'Avvikelse ' + nf(diff*1000,1) + ' mm — kör längre sträcka så att '
+        + 'stationärt tillstånd hinner uppstå, eller granska geometrin.';
+  }
+
+  $('srcnote').innerHTML = v.source + (v.sourceURL
+    ? ` <a href="${v.sourceURL}" target="_blank" rel="noreferrer">Källa</a>` : '');
+
+  draw(sw, v, {cx, cy, R1, want});
+}
+
+function draw(sw, v, ref){
+  const cv = $('c'), g = cv.getContext('2d');
+
+  // Ritytan följer den verkliga visningsstorleken, annars trycks bilden ihop
+  // när sidan är smalare än canvasens ursprungsmått. Vi ritar i CSS-pixlar och
+  // låter transformen ta hand om skärmens pixeltäthet.
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = Math.max(1, Math.round(r.width)), H = Math.max(1, Math.round(r.height));
+  if (cv.width !== W*dpr || cv.height !== H*dpr){ cv.width = W*dpr; cv.height = H*dpr; }
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,W,H);
+
+  // samla allt som ska rymmas
+  const pts = [];
+  for (const f of sw.frames){
+    pts.push(...f.body);
+    for (const u of f.units || []) pts.push(...u.body);
+  }
+  const b = RR.bounds(pts);
+  const pad = 26;
+  const k = Math.min((W-2*pad)/Math.max(b.w,1e-6), (H-2*pad)/Math.max(b.h,1e-6));
+  const X = x => pad + (x - b.minX)*k;
+  const Y = y => H - pad - (y - b.minY)*k;      // y uppåt, som en ritning
+
+  const poly = (p, fill, stroke, lw=1) => {
+    g.beginPath();
+    p.forEach((q,i) => i ? g.lineTo(X(q.x),Y(q.y)) : g.moveTo(X(q.x),Y(q.y)));
+    g.closePath();
+    if (fill){ g.fillStyle = fill; g.fill(); }
+    if (stroke){ g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
+  };
+
+  // svept yta: alla karosser staplade ljust
+  g.globalAlpha = 1;
+  for (const f of sw.frames){
+    poly(f.body, '#c3ced8', null);
+    for (const u of f.units || []) poly(u.body, '#d8cbb8', null);
+  }
+
+  // axlarnas banor
+  const trail = (get, col) => {
+    g.beginPath();
+    sw.frames.forEach((f,i) => { const p = get(f); i ? g.lineTo(X(p.x),Y(p.y)) : g.moveTo(X(p.x),Y(p.y)); });
+    g.strokeStyle = col; g.lineWidth = 1.4; g.setLineDash([5,4]); g.stroke(); g.setLineDash([]);
+  };
+  trail(f => f.rear, '#087e66');
+  trail(f => f.units[0].axle, '#0a8f73');
+
+  // fordonskonturer med jämna mellanrum
+  const step = Math.max(1, Math.floor(sw.frames.length/16));
+  for (let i = 0; i < sw.frames.length; i += step){
+    const f = sw.frames[i];
+    poly(f.body, null, '#1765ce', 1);
+    for (const u of f.units || []){
+      poly(u.body, null, '#b96409', 1);
+      g.beginPath();                               // kopplingsarm
+      g.moveTo(X(u.hitch.x), Y(u.hitch.y)); g.lineTo(X(u.axle.x), Y(u.axle.y));
+      g.strokeStyle = '#b9640980'; g.lineWidth = 1; g.stroke();
+      g.beginPath(); g.arc(X(u.hitch.x), Y(u.hitch.y), 2.6, 0, 7); g.fillStyle = '#b96409'; g.fill();
+    }
+  }
+
+  // slutläget tydligt
+  const f = sw.frames.at(-1);
+  poly(f.body, null, '#0b3f8f', 2.2);
+  for (const u of f.units || []) poly(u.body, null, '#8a4a06', 2.2);
+
+  // skalstreck
+  const metres = Math.max(1, Math.round(b.w/6));
+  g.strokeStyle = '#4a5c6a'; g.lineWidth = 1.4;
+  g.beginPath(); g.moveTo(pad, H-11); g.lineTo(pad + metres*k, H-11);
+  g.moveTo(pad, H-15); g.lineTo(pad, H-7);
+  g.moveTo(pad + metres*k, H-15); g.lineTo(pad + metres*k, H-7); g.stroke();
+  g.fillStyle = '#31414e'; g.font = '12px Inter, Arial';
+  g.fillText(metres + ' m', pad + metres*k + 8, H-7);
+}
+
+['veh','steer','dist'].forEach(id => $(id).addEventListener('input', build));
+let resizeTimer;
+addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(build, 120); });
+$('fwd').onclick = () => { gear = 1;  $('fwd').ariaPressed = 'true';  $('rev').ariaPressed = 'false'; build(); };
+$('rev').onclick = () => { gear = -1; $('fwd').ariaPressed = 'false'; $('rev').ariaPressed = 'true';  build(); };
+build();
+</script>
+</body>
+</html>

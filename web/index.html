@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ritningsrummet · status</title>
+<meta name="description" content="Verktyg för granskning av ritningar inom trafikplanering. Projektstatus.">
+<style>
+:root{--ink:#182f40;--muted:#627483;--line:#dce4ea;--blue:#1765ce;--navy:#142634;
+  --orange:#b96409;--green:#087e66;--paper:#fff;--bg:#eef2f5}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:16px;line-height:1.6}
+header{background:var(--navy);color:#fff;padding:30px 16px}
+.wrap{max-width:720px;margin:0 auto}
+header h1{margin:0;font-size:1.35rem;font-weight:650;letter-spacing:-.01em}
+header p{margin:7px 0 0;color:#a7becf;font-size:.8125rem;letter-spacing:.11em;text-transform:uppercase}
+main{padding:0 16px 56px}
+section{background:var(--paper);border:1px solid var(--line);border-radius:9px;
+  padding:22px;margin-top:20px}
+h2{font-size:1rem;font-weight:650;margin:0 0 12px}
+p{margin:0 0 13px}
+p:last-child{margin-bottom:0}
+.lead{margin-top:22px;font-size:1.0625rem}
+ul{margin:0;padding-left:20px}
+li{margin-bottom:9px}
+li:last-child{margin-bottom:0}
+table{width:100%;border-collapse:collapse;font-size:.875rem;margin-top:4px}
+td{padding:9px 0;border-bottom:1px solid #eef1f4;vertical-align:top}
+tr:last-child td{border-bottom:0}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;
+  white-space:nowrap;padding-left:14px}
+td:first-child{color:var(--muted)}
+code{background:#eef2f6;border:1px solid #e0e7ed;border-radius:4px;
+  padding:1px 5px;font-size:.8125rem;font-family:ui-monospace,Consolas,monospace}
+.tag{display:inline-block;font-size:.6875rem;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;padding:3px 8px;border-radius:20px;vertical-align:middle;
+  margin-left:8px}
+.tag.done{background:#e2f4ed;color:#0d5243}
+.tag.open{background:#fff0d9;color:#8a4f08}
+.muted{color:var(--muted);font-size:.875rem}
+a{color:#155bb3}
+.cta{display:inline-block;background:var(--blue);color:#fff;text-decoration:none;
+  font-weight:600;font-size:.9375rem;padding:11px 18px;border-radius:7px;margin-top:3px}
+.cta:hover{background:#0b50af}
+footer{max-width:720px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:.8125rem}
+hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Ritningsrummet</h1>
+  <p>Trafikplanering · projektstatus</p>
+</div></header>
+
+<main class="wrap">
+  <p class="lead">Ett verktyg för att granska ritningar inom trafikplanering: läsa in
+  PDF, DXF och bilder, lägga egna lager ovanpå, kalibrera skala, mäta längd och
+  area, och testa körspår för typfordon enligt Trafikverkets VGU.</p>
+
+  <section>
+    <h2>Körspårskontroll för ledade fordon</h2>
+    <p>Rita körspår för ledbuss och dragbil med påhängsvagn, och se hur långt
+    släpet skär in i kurvan. Jämförs löpande mot den slutna formen för
+    eftersläpning.</p>
+    <p><a class="cta" href="/korspar">Öppna körspårskontrollen</a></p>
+  </section>
+
+  <section>
+    <h2>Verktyget körs lokalt</h2>
+    <p>Ritningarna lämnar aldrig datorn. Allt arbete sker i webbläsaren, och
+    projektfilen sparas där användaren väljer. Den här sidan beskriver bara
+    projektets status — själva verktyget är en fil man öppnar från sin egen disk.</p>
+  </section>
+
+  <section>
+    <h2>Vad som är gjort</h2>
+    <table>
+      <tr><td>Geometri, skala, DXF och körspår utbrutet och testat</td><td>klart</td></tr>
+      <tr><td>Automatiska tester mot analytiska facit</td><td>93 st</td></tr>
+      <tr><td>Fel i automatisk skalavläsning hittat och rättat</td><td>3.6.1</td></tr>
+      <tr><td>Ledade fordon modellerade: ledbuss och påhängsvagn</td><td>klart</td></tr>
+      <tr><td>Avvikelse mot sluten form för eftersläpning</td><td>0,04 mm</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Felet som hittades</h2>
+    <p>Den automatiska skalavläsningen avgjorde om en träff var en riktig
+    skalangivelse genom att leta efter ordet <em>skala</em> i ett teckenfönster
+    runt träffen, i stället för i träffen själv. En lutningsangivelse som
+    <code>1:20</code> kunde därför hamna först i förslagslistan när ordet
+    <code>SKALA</code> fanns på annat håll i ritningstexten.</p>
+    <p>Accepterade man förslaget blev varje mått i granskningen fel med faktor 20.
+    Rättat, med två regressionstester som faller på den gamla koden.</p>
+  </section>
+
+  <section>
+    <h2>Körspår för ledade fordon</h2>
+    <p>Modellen bygger på att en släpad axel inte kan röra sig i sidled, vilket ger
+    samma ekvation som framaxelföljningen redan använder. Formeln är oförändrad vid
+    backning — där växer avvikelsen av sig själv, så fällkniv uppstår ur
+    matematiken i stället för ur ett specialfall.</p>
+    <p>Måtten är hämtade ur Trafikverkets rapport DETESS, som publicerar den
+    ledgeometri VGU:s grundvärden saknar. Timmerbil ingår inte: geometrin finns
+    inte publicerad, och ett verkligt timmerekipage är dollystyrt — tre kroppar,
+    inte två. Att gissa måtten vore att bygga in precis den feltyp verktyget ska
+    hitta.</p>
+  </section>
+
+  <section>
+    <h2>Härnäst</h2>
+    <ul>
+      <li><strong>Ledade fordon in i gränssnittet</strong> <span class="tag open">öppet</span><br>
+        <span class="muted">Modellen är klar och testad, men huvudverktyget ritar
+        ännu inte de släpade enheterna.</span></li>
+      <li><strong>Dela upp källkoden</strong> <span class="tag open">öppet</span><br>
+        <span class="muted">Verktyget är i dag en enda fil på 22 MB, varav 99 % är
+        inbäddade bibliotek och en bild på två rader.</span></li>
+      <li><strong>Krympa filen</strong> <span class="tag open">öppet</span><br>
+        <span class="muted">Omkodad välkomstbild och bortplockade teckentabeller
+        tar den från 22 till omkring 14 MB utan att någon funktion försvinner.</span></li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <hr>
+  Fordonsmått ur Trafikverkets VGU, <em>Begrepp och grundvärden</em>, och
+  projektrapport DETESS 1.0. Verktyget använder pdf.js och Tesseract, båda
+  under Apache 2.0.
+</footer>
+</body>
+</html>
