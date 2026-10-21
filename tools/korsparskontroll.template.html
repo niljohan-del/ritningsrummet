@@ -35,8 +35,13 @@ td:first-child{color:var(--muted);font-weight:400}
 .verdict.ok{background:#e2f4ed;color:#0d5243;border:1px solid #b5ddd0}
 .verdict.bad{background:#fff0f0;color:#922e36;border:1px solid #f0c9ca}
 figure{margin:0;padding:18px;display:flex;flex-direction:column;min-height:0}
-canvas{flex:1;min-height:360px;background:#fff;border:1px solid var(--line);border-radius:7px;
-  width:100%;display:block}
+/* Wrappern äger storleken. Ligger canvasen kvar i flödet styr dess
+   backing-storlek den intrinsiska proportionen, som med width:100% styr
+   höjden — en mätning i en dold panel kan då sträcka den till tusentals
+   pixlar. Absolut placering bryter den återkopplingen. */
+.canvas-wrap{flex:1;min-height:360px;position:relative}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;
+  background:#fff;border:1px solid var(--line);border-radius:7px}
 figcaption{font-size:.75rem;color:var(--muted);margin-top:11px;line-height:1.6}
 .key{display:inline-flex;align-items:center;gap:6px;margin-right:16px}
 .key i{width:13px;height:3px;display:inline-block;border-radius:2px}
@@ -74,7 +79,7 @@ figcaption{font-size:.75rem;color:var(--muted);margin-top:11px;line-height:1.6}
   </div>
 
   <figure>
-    <canvas id="c" width="1100" height="760"></canvas>
+    <div class="canvas-wrap"><canvas id="c"></canvas></div>
     <figcaption>
       <span class="key"><i style="background:#1765ce"></i>dragande enhet</span>
       <span class="key"><i style="background:#b96409"></i>släpad enhet</span>
@@ -171,9 +176,11 @@ function draw(sw, v, ref){
   // Ritytan följer den verkliga visningsstorleken, annars trycks bilden ihop
   // när sidan är smalare än canvasens ursprungsmått. Vi ritar i CSS-pixlar och
   // låter transformen ta hand om skärmens pixeltäthet.
-  const r = cv.getBoundingClientRect();
+  const r = cv.parentElement.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const W = Math.max(1, Math.round(r.width)), H = Math.max(1, Math.round(r.height));
+  // En dold flik kan rapportera noll. Rita då i en rimlig standardstorlek
+  // i stället för att krympa ritytan till ingenting.
+  const W = Math.max(320, Math.round(r.width)), H = Math.max(280, Math.round(r.height));
   if (cv.width !== W*dpr || cv.height !== H*dpr){ cv.width = W*dpr; cv.height = H*dpr; }
   g.setTransform(dpr,0,0,dpr,0,0);
   g.clearRect(0,0,W,H);
@@ -244,8 +251,12 @@ function draw(sw, v, ref){
 }
 
 ['veh','steer','dist'].forEach(id => $(id).addEventListener('input', build));
+// ResizeObserver i stället för resize-händelsen: ritytan kan ändra storlek
+// utan att fönstret gör det, till exempel när en sidopanel öppnas.
 let resizeTimer;
-addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(build, 120); });
+const redraw = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(build, 120); };
+if (window.ResizeObserver) new ResizeObserver(redraw).observe($('c').parentElement);
+addEventListener('resize', redraw);
 $('fwd').onclick = () => { gear = 1;  $('fwd').ariaPressed = 'true';  $('rev').ariaPressed = 'false'; build(); };
 $('rev').onclick = () => { gear = -1; $('fwd').ariaPressed = 'false'; $('rev').ariaPressed = 'true';  build(); };
 build();
