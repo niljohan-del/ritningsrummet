@@ -4,6 +4,9 @@ Lokal granskning av ritningar för trafikplanering. Läser PDF, DXF och bilder,
 lägger egna lager ovanpå, kalibrerar skala, mäter längd och area, och testar
 körspår för typfordon enligt Trafikverkets VGU — stela såväl som ledade.
 
+Ritverktyg: frihand, linje, rektangel, polygon och text. Linjer kan få punkt,
+pil eller tvärstreck i vardera änden, och textrutor kan roteras fritt.
+
 Ritningarna lämnar aldrig datorn.
 
 ## Använd verktyget

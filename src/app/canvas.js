@@ -20,7 +20,7 @@ function drawSweep(c,o,p,interactive){const sw=getSweep(o,p);if(!sw)return;const
  const txt=`${o.name||o.vehicle.name} · ${sw.issues.length?'KÖRSPÅRET MÅSTE JUSTERAS':'översiktligt körspår'}${o.drive||o.directions?' · '+(f?.direction<0?'BACK':f?.direction>0?'FRAM':'START'):''}`;label(c,txt,{x:o.points[0].x,y:o.points[0].y-15*u},11*tu,color);c.restore();}
 function drawObject(c,o,p,interactive=true){const color=o.color||getLayer(o.layerId)?.color||'#1765ce',u=unit(p),ps=objectPoints(o);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=(o.width||2*u)*pageAppearance(p).line;c.lineCap='round';c.lineJoin='round';if(o.kind==='landscape'){drawLandscape(c,o,p);c.restore();return;}if(o.kind==='street'){drawStreet(c,o,p,interactive);c.restore();return;}if(o.kind==='vehicle'){drawSweep(c,o,p,interactive);c.restore();return;}
  if(o.kind==='text'){drawText(c,o,p);}
- else{c.beginPath();path(c,ps,['area','rect'].includes(o.kind));if(['area','rect'].includes(o.kind)){c.save();c.globalAlpha*=.11;c.fill();c.restore();}c.stroke();if(['measure','area'].includes(o.kind)){for(const a of ps){c.beginPath();c.arc(a.x,a.y,2.5*u*pageAppearance(p).line,0,RR.TAU);c.fill();}const at=o.kind==='area'?{x:ps.reduce((a,q)=>a+q.x,0)/ps.length,y:ps.reduce((a,q)=>a+q.y,0)/ps.length}:RR.lerp(ps[0],ps.at(-1),.5);label(c,measureLabel(o,p),{x:at.x+5*u,y:at.y-10*u},13*u*pageAppearance(p).text,color);}}
+ else{const closed=['area','rect','poly'].includes(o.kind);c.beginPath();path(c,ps,closed);if(closed){c.save();c.globalAlpha*=.11;c.fill();c.restore();}c.stroke();if(['line','pen'].includes(o.kind))drawLineEnds(c,o,ps,p);if(['measure','area'].includes(o.kind)){for(const a of ps){c.beginPath();c.arc(a.x,a.y,2.5*u*pageAppearance(p).line,0,RR.TAU);c.fill();}const at=o.kind==='area'?{x:ps.reduce((a,q)=>a+q.x,0)/ps.length,y:ps.reduce((a,q)=>a+q.y,0)/ps.length}:RR.lerp(ps[0],ps.at(-1),.5);label(c,measureLabel(o,p),{x:at.x+5*u,y:at.y-10*u},13*u*pageAppearance(p).text,color);}}
  c.restore();}
 function drawScene(c,p,interactive=false){drawBase(c,p);for(const l of S.layers){if(!l.visible)continue;c.save();c.globalAlpha=l.opacity;for(const o of p.objects.filter(o=>o.layerId===l.id).sort((a,b)=>Number(LC.isSurface(b))-Number(LC.isSurface(a))))drawObject(c,o,p,interactive);c.restore();}}
 function draw(){if(typeof workspaceMode!=='undefined'&&workspaceMode==='sections')return;const p=page(),dpr=window.devicePixelRatio||1;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cw,ch);$('empty').hidden=!!p;if(!p)return;ctx.save();ctx.translate(view.x,view.y);ctx.scale(view.z,view.z);ctx.save();ctx.shadowColor='#18374a25';ctx.shadowBlur=15/view.z;ctx.shadowOffsetY=3/view.z;ctx.fillStyle='#fff';ctx.fillRect(0,0,p.w,p.h);ctx.restore();drawScene(ctx,p,true);
@@ -47,7 +47,40 @@ function drawVehicleDraft(c,p){
 }
 
 function textLayout(c,o,p){const size=(o.fontSize||18*unit(p))*pageAppearance(p).text,lineHeight=size*1.25,origin=o.points[0];c.save();c.font=canvasTextFont(o,p);c.textBaseline='alphabetic';let minX=origin.x,maxX=origin.x,minY=origin.y-size,maxY=origin.y;const lines=o.text.split('\n').map((text,i)=>{const m=c.measureText(text),y=origin.y+i*lineHeight,x=origin.x;minX=Math.min(minX,x-(m.actualBoundingBoxLeft||0));maxX=Math.max(maxX,x+Math.max(m.width,m.actualBoundingBoxRight||0));minY=Math.min(minY,y-(m.actualBoundingBoxAscent||size*.8));maxY=Math.max(maxY,y+(m.actualBoundingBoxDescent||size*.2),o.fontUnderline?y+size*.16:y);return{text,x,y,width:m.width};});c.restore();return{lines,size,bounds:{minX,maxX,minY,maxY}};}
-function drawText(c,o,p){const layout=textLayout(c,o,p);c.font=canvasTextFont(o,p);c.textBaseline='alphabetic';for(const line of layout.lines){c.fillText(line.text,line.x,line.y);if(o.fontUnderline&&line.width>0){c.save();c.strokeStyle=c.fillStyle;c.lineWidth=layout.size/16;c.lineCap='butt';c.beginPath();c.moveTo(line.x,line.y+layout.size*.12);c.lineTo(line.x+line.width,line.y+layout.size*.12);c.stroke();c.restore();}}}
+/* Linjeändar: punkt, pil eller tvärstreck i vardera änden.
+   Markörerna skalas med linjebredden så de följer med när ritningen
+   zoomas eller linjetjockleken ändras. */
+const LINE_ENDS=[['none','Ingen'],['dot','Punkt'],['arrow','Pil'],['bar','Tvärstreck']];
+function drawLineEnd(c,at,towards,style,size){
+ if(!style||style==='none')return;
+ const dx=at.x-towards.x,dy=at.y-towards.y,d=Math.hypot(dx,dy);
+ if(d<1e-9)return;
+ const ux=dx/d,uy=dy/d,nx=-uy,ny=ux;
+ c.beginPath();
+ if(style==='dot'){c.arc(at.x,at.y,size*.9,0,RR.TAU);c.fill();return;}
+ if(style==='bar'){c.moveTo(at.x+nx*size*1.3,at.y+ny*size*1.3);
+                   c.lineTo(at.x-nx*size*1.3,at.y-ny*size*1.3);c.stroke();return;}
+ // pil: fylld triangel med spetsen i ändpunkten
+ const back=size*2.6,half=size*1.25;
+ c.moveTo(at.x,at.y);
+ c.lineTo(at.x-ux*back+nx*half,at.y-uy*back+ny*half);
+ c.lineTo(at.x-ux*back-nx*half,at.y-uy*back-ny*half);
+ c.closePath();c.fill();
+}
+function drawLineEnds(c,o,ps,p){
+ if(ps.length<2)return;
+ if(!o.endStart&&!o.endEnd)return;
+ const size=Math.max((o.width||2*unit(p))*pageAppearance(p).line*1.6,2.5*unit(p));
+ c.save();c.lineCap='butt';
+ drawLineEnd(c,ps[0],ps[1],o.endStart,size);
+ drawLineEnd(c,ps.at(-1),ps.at(-2),o.endEnd,size);
+ c.restore();
+}
+function drawText(c,o,p){const layout=textLayout(c,o,p);c.font=canvasTextFont(o,p);c.textBaseline='alphabetic';// Rotationen läggs som transform kring ankarpunkten, så textLayout kan
+ // fortsätta räkna oroterat och bounds förblir enkla att resonera om.
+ const rot=(o.rotation||0)*Math.PI/180,anchor=o.points[0];
+ if(rot){c.save();c.translate(anchor.x,anchor.y);c.rotate(rot);c.translate(-anchor.x,-anchor.y);}
+ for(const line of layout.lines){c.fillText(line.text,line.x,line.y);if(o.fontUnderline&&line.width>0){c.save();c.strokeStyle=c.fillStyle;c.lineWidth=layout.size/16;c.lineCap='butt';c.beginPath();c.moveTo(line.x,line.y+layout.size*.12);c.lineTo(line.x+line.width,line.y+layout.size*.12);c.stroke();c.restore();}}if(rot)c.restore();}
 
 const INLINE_ASSETS=$('bundledAssets'),ASSET_MAP=INLINE_ASSETS?JSON.parse(INLINE_ASSETS.textContent):null,decode64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 const ASSET_FILE={pdfMain:'pdfMain.mjs',pdfWorker:'pdfWorker.mjs',pdfLib:'pdfLib.mjs',ocrWorker:'ocrWorker.js',ocrWasm:'ocrWasm.wasm',ocrLang:'ocrLang.traineddata',licenses:'licenses.txt'};
