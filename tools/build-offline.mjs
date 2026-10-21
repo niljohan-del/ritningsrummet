@@ -45,16 +45,20 @@ if (!html.includes(linkTag)) throw Error('Hittade ingen stylesheet-länk i src/i
 html = html.replace(linkTag, () => `<style>${css}</style>`);
 
 /* ---- 2. Koden tillbaka inline, i samma ordning ---- */
-const NAMES = ['core/rr.js', 'data/vehicles.js', 'core/rs.js', 'core/lc.js', 'app.js'];
-const tags = NAMES.map(n => `<script src="${n}"></` + `script>`).join('\n');
-if (!html.includes(tags)) throw Error('Script-taggarna ser inte ut som väntat i src/index.html.');
+// Listan läses ur index.html i stället för att hårdkodas, så att en
+// uppdelning av app.js inte kräver att det här skriptet ändras i takt.
+const tagRe = /<script src="([^"]+)"><\/script>\n?/g;
+const NAMES = [...html.matchAll(tagRe)].map(m => m[1]);
+if (!NAMES.length) throw Error('Hittade inga script-taggar i src/index.html.');
 const inlined = [];
 for (const n of NAMES) {
   const body = await readFile(join(SRC, n), 'utf8');
   if (body.includes('</scr' + 'ipt>')) throw Error(`${n} innehåller en avslutande script-tagg.`);
   inlined.push('<script>' + body + '</' + 'script>');
 }
-html = html.replace(tags, () => inlined.join('\n'));
+let k = 0;
+html = html.replace(tagRe, () => inlined[k++] + '\n');
+if (k !== NAMES.length) throw Error('Script-taggarna ersattes inte som väntat.');
 
 /* ---- 3. Vendor tillbaka som base64-klump ---- */
 const files = await walk(VENDOR);
@@ -85,7 +89,7 @@ if (!html.includes(CSP_SERVED)) throw Error('Hittade ingen serverad CSP att skä
 html = html.replace(CSP_SERVED, () => CSP_STRICT);
 
 /* ---- 6. Kontrollera att inget pekar utanför filen ---- */
-for (const bad of ['href="styles.css"', 'src="core/', 'src="app.js"', 'src="assets/'])
+for (const bad of ['href="styles.css"', 'src="core/', 'src="app/', 'src="data/', 'src="assets/'])
   if (html.includes(bad)) throw Error(`Filen refererar fortfarande ${bad}.`);
 
 await mkdir('dist', { recursive: true });

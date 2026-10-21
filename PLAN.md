@@ -158,9 +158,21 @@ ned till andra decimalen.
 | offline, komplett | 16,15 MB |
 | offline, `--slim` utan CJK | 14,66 MB |
 
-**Etapp 5 — Dela upp huvudappen**
-161 KB blir moduler per arbetsläge (plan / sektion / lark / pilbil) plus
-paneler, dialoger och canvas-ritning. Störst etapp, görs i småsteg.
+**Etapp 5 — Dela upp huvudappen. KLAR.**
+161 KB blev 14 filer i `src/app/`, en per arbetsområde. Koden visade sig redan
+ligga tematiskt ordnad, så uppdelningen kunde göras med rena snitt: ingen
+funktion flyttades och ingen rad skrevs om. Det var avgörande — funktionerna
+delar ett globalt scope, och att flytta dem hade gjort dolda beroenden till
+fel.
+
+Före ändringen sparades ett beteendefacit, `test/fingerprint.json`: appen körs
+i en riktig webbläsare och allt fångas — inläst DXF, skala, körspår för
+samtliga fem typfordon med slutpolygoner, arbetslägen, projektstruktur och en
+hash av canvasens pixlar. Facit kontrollerades först för determinism (den
+första versionen hashade genererade id:n och var slumpmässig).
+
+Både den serverade uppdelningen och offline-filen matchar facit i varje
+mätpunkt, pixelhashen inräknad.
 
 **Etapp 6 — Krymp filen**
 Uppmätta vinster:

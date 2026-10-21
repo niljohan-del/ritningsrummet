@@ -24,7 +24,8 @@ node tools/build-offline.mjs            # enfilsversion, 16,1 MB
 node tools/build-offline.mjs --slim     # utan CJK-teckentabeller, 14,7 MB
 node tools/build-web.mjs                # serverad version i web/app/
 node tools/build-korsparskontroll.mjs   # fristående körspårskontroll
-node --test "test/**/*.test.js"         # 93 tester
+node --test "test/**/*.test.js"         # 93 enhetstester
+node test/fingerprint.mjs               # beteendefacit för hela appen
 ```
 
 Under utveckling: servera `src/` och `public/` tillsammans som en katalog.
@@ -33,23 +34,30 @@ Under utveckling: servera `src/` och `public/` tillsammans som en katalog.
 
 | Sökväg | Innehåll |
 |---|---|
-| `src/` | Källan. `index.html`, `styles.css`, fem skript som delar globalt scope |
+| `src/` | Källan. `index.html`, `styles.css` och skripten |
 | `src/core/rr.js` | Geometri, DXF, skala, körspår och ledade fordon |
+| `src/app/` | Gränssnittet i 14 filer per arbetsområde |
 | `src/data/vehicles.js` | Typfordon med källhänvisning per fordon |
 | `public/vendor/` | pdf.js och Tesseract som riktiga filer |
 | `public/assets/` | Välkomstbilden som WebP |
-| `test/` | 93 tester mot analytiska facit |
+| `test/` | 93 enhetstester plus ett beteendefacit för hela appen |
 | `tools/` | Byggskript och engångsverktygen från migreringen |
 | `web/` | Det som publiceras |
 | `baseline/` | Fryst 3.6, historisk referens. Behövs inte för att bygga. |
 
 ## Hur koden hänger ihop
 
-Appen är fem klassiska `<script>` som delar ett gemensamt globalt scope — inte
-ES-moduler. Det är avsiktligt bevarat från enfilsversionen: 164 funktioner
+Appen är klassiska `<script>` som delar ett gemensamt globalt scope — inte
+ES-moduler. Det är avsiktligt bevarat från enfilsversionen: 163 funktioner
 delar variabler fritt, och att bryta isär scopet skulle göra dolda beroenden
-till fel. Uppdelningen flyttade koden ordagrant och ändrade bara tillgångs-
-lagret.
+till fel.
+
+Gränssnittet ligger i `src/app/` uppdelat på arbetsområde: `panels.js`,
+`canvas.js`, `sweep.js`, `sections.js`, `lark.js`, `pilbil.js` och så vidare.
+Uppdelningen gjordes med rena snitt — ingen funktion flyttades och ingen rad
+skrevs om, bara filgränser lades in vid toppnivådeklarationer. Ordningen är
+därmed exakt densamma, vilket spelar roll eftersom toppnivåns `const` och
+`let` inte hissas mellan skript.
 
 Komponenterna hämtas genom `assetBytes` och `assetURL`. Finns en inbäddad
 base64-klump används den; annars hämtas filerna under `vendor/`. Samma kod

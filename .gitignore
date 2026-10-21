@@ -18,3 +18,6 @@ Thumbs.db
 
 # Källan till welcome.webp; bara den omkodade versionen behöver checkas in
 public/assets/welcome.png
+
+# Tillfällig kontrollkatalog
+.offcheck/
