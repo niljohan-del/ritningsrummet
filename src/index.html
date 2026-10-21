@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="sv">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ritningsrummet 3.6 · Trafikplanering</title><meta name="description" content="Lokal ritningsgranskning med lager, skalkalibrering, mått och körspår.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; connect-src 'self' data: blob:; worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'none'">
+<link rel="stylesheet" href="styles.css"></head>
+<body>
+<section id="welcomePage" aria-labelledby="welcomeTitle">
+ <div class="welcome-sheet">
+  <div class="welcome-masthead"><span class="welcome-wordmark">RITNINGSRUMMET</span><span>TRAFIKPLANERING <span class="welcome-edition">/ 3.6</span></span></div>
+  <figure class="welcome-figure"><img src="assets/welcome.webp" width="2048" height="1147" alt="Arkitektskiss av en stadsmiljö med gator, träd, byggnader och parkering." decoding="async"><figcaption><span>PLAN · SEKTION · RÖRELSE</span><span>ETT RUM FÖR DINA IDÉER</span></figcaption></figure>
+  <div class="welcome-content">
+   <div class="welcome-intro"><p class="welcome-eyebrow">VÄLKOMMEN IN</p><h1 id="welcomeTitle">Från ritning<br>till genomtänkt plats.</h1><p class="welcome-description">Skissa på blankt papper eller granska en ritning. Mät, testa körspår och utforma gatusektioner och utemiljöer i egna lager. Spara projektet eller exportera till PDF och JPG.</p></div>
+   <div class="welcome-menu" aria-label="Välj hur du vill börja"><button id="welcomeLoad" class="welcome-choice"><span class="welcome-choice-number" aria-hidden="true">01</span><span><strong>Ladda projekt</strong><small>Fortsätt med en sparad projektfil</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button><button id="welcomeNew" class="welcome-choice"><span class="welcome-choice-number" aria-hidden="true">02</span><span><strong>Nytt projekt</strong><small>Börja med en ritning eller gatusektion</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button id="welcomeBlank" class="welcome-choice"><span class="welcome-choice-number" aria-hidden="true">03</span><span><strong>Blankt papper</strong><small>Välj format och skala och börja skissa</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5zM15 3v5h4"/></svg></button><button id="welcomeResume" class="welcome-resume" hidden>Tillbaka till pågående projekt</button><p class="welcome-local">Arbeta lokalt på din dator. Ingen anslutning behövs.</p></div>
+  </div>
+ </div>
+</section>
+<div id="appShell" hidden inert>
+<header><button id="homeBtn" class="brand brand-home" title="Till framsidan" aria-label="Ritningsrummet – till framsidan"><span class="brand-mark" aria-hidden="true">R</span><div>Ritningsrummet<small>TRAFIKPLANERING · 3.6</small></div></button><div class="project-head"><input id="projectName" value="Ny granskning" aria-label="Projektnamn" maxlength="100"><span id="saveState">Lokalt på din dator</span></div><nav aria-label="Projekt"><button id="openProject" class="dark">Öppna projekt</button><button id="saveProject" class="dark">Spara projekt</button><button id="exportBtn" class="primary">Exportera <span aria-hidden="true">↗</span></button><button id="helpBtn" class="dark square" title="Hjälp" aria-label="Hjälp">?</button></nav></header>
+<div class="workspace-nav"><div class="workspace-tabs" role="tablist" aria-label="Arbetsyta"><button id="mapTab" role="tab" aria-selected="true" aria-controls="workspace">Plankarta</button><button id="sectionsTab" role="tab" aria-selected="false" aria-controls="sectionWorkspace">Gatusektioner</button><button id="larkTab" role="tab" aria-selected="false" aria-controls="workspace">LARK</button></div><div class="workspace-actions"><button id="appearanceToggle" aria-controls="appearanceBar" aria-expanded="false">Linjer & text</button><button id="focusToggle" aria-pressed="false" title="Större arbetsyta">Fokusläge</button></div></div>
+<div id="mapToolbar" class="toolbar" role="toolbar" aria-label="Ritverktyg"><div id="tools"></div><div class="panel-switches"><button id="toggleLeftPanel" aria-controls="leftPanel" aria-expanded="true">Dölj Underlag & lager</button><button id="toggleRightPanel" aria-controls="rightPanel" aria-expanded="true">Dölj Verktyg & mått</button></div><div class="toolbar-end"><label class="check"><input type="checkbox" id="snap" checked> Snäpp</label><button id="undo" class="square" title="Ångra (Ctrl+Z)" aria-label="Ångra">↶</button><button id="redo" class="square" title="Gör om (Ctrl+Y)" aria-label="Gör om">↷</button></div></div>
+<div id="appearanceBar" hidden class="appearance-bar" role="group" aria-label="Storlek på kartans egna lager">
+<span class="appearance-caption">Egna lager · aktuellt ark</span><button id="appearanceClose" aria-label="Stäng linjer och text">×</button>
+<label for="mapLineSize">Linjebredd <input id="mapLineSize" type="range" min="1" max="300" value="100" step="1"><output id="mapLineValue" for="mapLineSize">100 %</output></label>
+<label for="mapTextSize">Textstorlek <input id="mapTextSize" type="range" min="1" max="300" value="100" step="1"><output id="mapTextValue" for="mapTextSize">100 %</output></label>
+<button id="appearanceReset" title="Återställ linjer och text till 100 %">Återställ</button>
+</div>
+<main id="workspace">
+ <aside class="left-panel" id="leftPanel">
+ <div class="panel-heading"><strong>Underlag & lager</strong><button id="collapseLeftPanel" class="square" title="Minimera vänster panel" aria-label="Minimera vänster panel">−</button></div>
+  <section id="underlaySection"><div class="section-head"><h2>Underlag</h2><button class="small" id="addFile">+ Lägg till</button></div><input hidden type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.dxf,.svg,.dwg,.dgn,.dwf"><button id="addBlank" class="full small">+ Blankt papper</button><div id="documents" class="doc-list"><p class="muted">Läs in din första ritning.</p></div><p id="fileInfo" class="tiny"></p><label class="range-label" id="baseOpacityWrap">Underlagets synlighet <input id="baseOpacity" type="range" min="0" max="100" value="100" aria-label="Underlagets synlighet"></label></section>
+  <section class="scale-card" id="scaleCard"><div class="section-head"><h2>Skala</h2><span id="scaleStatus" class="pill warn">Saknas</span></div><strong id="scaleValue">Ingen ritning vald</strong><p id="scaleDetail" class="muted">Läs in ett underlag för att börja.</p><button id="scaleBtn" class="full">Ställ in / kontrollera skala</button><button id="calibrateBtn" class="full link-button">Kalibrera med två punkter</button></section>
+  <section class="layer-section"><div class="section-head"><h2>Granskningslager</h2><button id="addLayer" class="small" title="Nytt lager">+ Nytt</button></div><div id="layers"></div><p class="tiny">Objekt skapas i det markerade lagret.</p></section>
+  <section id="larkPalette" hidden aria-label="LARK-element"></section>
+  <div class="local-note"><span aria-hidden="true">▣</span> Filerna behandlas på din dator.<br>Ingen anslutning behövs.</div>
+ </aside>
+ <div id="viewport" tabindex="0" aria-label="Ritningsyta. Välj ett verktyg och klicka på ritningen.">
+  <canvas id="drawing"></canvas>
+  <div id="empty"><div class="empty-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M12 8h29l12 12v36H12zM41 8v13h12M23 33h19M23 41h12"/></svg></div><h1>Din skiss. Dina lager.</h1><p>Öppna en ritning eller börja på ett blankt papper.</p><button id="chooseFirst" class="primary">Öppna ritning</button><button id="emptyBlank" class="full">Skapa blankt papper</button><span class="formats">PDF · JPG / PNG · DXF · SVG</span><button id="demoBtn" class="link-button">Prova med en exempelritning</button></div>
+  <div id="canvasBanner" hidden></div><div id="draftActions" hidden><span id="draftLabel"></span><button id="finishDraft" class="primary small">Avsluta ↵</button><button id="cancelDraft" class="small">Avbryt Esc</button></div>
+  <div class="view-controls"><button id="zoomOut" aria-label="Zooma ut">−</button><span id="zoomLabel">100 %</span><button id="zoomIn" aria-label="Zooma in">+</button><button id="fit" title="Visa hela ritningen (F)">Anpassa</button></div>
+  <div id="scaleBar" hidden><div id="scaleBarLine"></div><span id="scaleBarText"></span></div>
+ </div>
+ <aside class="right-panel" id="rightPanel"><div class="section-head"><h2 id="inspectorHeading">Verktyg & objekt</h2><button id="collapseRightPanel" class="square" title="Minimera höger panel" aria-label="Minimera höger panel">−</button></div><div id="inspector"></div><section class="measurement-section"><div class="section-head"><h2>Mätningar</h2><span id="measurementCount" class="count">0</span></div><div id="measurements"><p class="muted">Mått på den här sidan visas här.</p></div></section></aside>
+</main>
+<section id="sectionWorkspace" hidden aria-label="Jämför gatusektioner"><div class="section-top"><div><h1>Gatusektioner</h1><p>Bygg från vänster till höger. Jämför i samma skala.</p></div><div class="row"><button id="sectionUndo">Ångra</button><button id="sectionRedo">Gör om</button><button id="sectionSources">Mått & källor</button></div></div><div id="sectionCompare" class="section-compare"></div></section>
+<dialog id="sectionIllustration"><div class="modal-head"><h2 id="illustrationTitle">Illustrerad sektion</h2><button id="closeIllustration" class="square" aria-label="Stäng illustration">×</button></div><div class="illustration-body"><canvas id="illustrationCanvas"></canvas><p class="tiny">Bredder och skyddsavstånd följer sektionen. Människor, fordon, vegetation och höjder är illustrativa schabloner.</p><div class="row"><button id="illustrationJPG">Hämta JPG</button><button id="illustrationPDF">Hämta PDF</button></div></div></dialog>
+<section id="pilbilPopup" hidden aria-label="Pilbil – ratt och körkontroller"><div id="pilbilDrag"><strong>Pilbil</strong><span id="pilbilTitle">Placera bilen</span><button id="pilbilClose" class="square small" aria-label="Avsluta Pilbil">×</button></div><div class="pilbil-body"><div class="pilbil-type-row"><label for="pilbilType">Typfordon<select id="pilbilType" aria-describedby="pilbilVehicleSize"></select></label><button id="pilbilEditVehicle" class="small">Egna mått…</button></div><p id="pilbilVehicleSize" class="tiny"></p><p class="tiny">Fordonsbyte startar en ny placering. Befintliga körningar behålls.</p><p id="pilbilInstruction" class="tiny"></p><div class="pilbil-dashboard"><svg id="pilbilWheel" viewBox="0 0 120 120" aria-label="Schematisk ratt"><circle cx="60" cy="60" r="48"/><circle cx="60" cy="60" r="12"/><path d="M13 52 48 59M107 52 72 59M60 72v35"/><path class="wheel-mark" d="M60 12v10"/></svg><div><strong id="pilbilAngle">Rakt fram</strong><small id="pilbilLimit">Hjulutslag</small><span id="pilbilDistance" class="tiny"></span></div></div><div class="row"><label class="field"><span>Körsteg (m)</span><input id="pilbilStep" type="number" min="0.1" max="1" step="0.1" value="0.5"></label><label class="field"><span>Styrsteg (°)</span><input id="pilbilSteerStep" type="number" min="1" max="15" step="1" value="5"></label></div><div class="pilbil-arrows"><button data-pilbil="forward" aria-label="Kör framåt">↑</button><button data-pilbil="left" aria-label="Vrid ratten vänster">←</button><button data-pilbil="center" class="small">Räta upp</button><button data-pilbil="right" aria-label="Vrid ratten höger">→</button><button data-pilbil="reverse" aria-label="Backa">↓</button></div><div class="row"><button id="pilbilUndoStep" class="small">Ångra körsteg</button><button id="pilbilNew" class="small">Ny placering</button></div><p class="tiny pilbil-note">Rattsymbolen är schematisk. 0 rätar upp · Enter avslutar. Körningen sparas i lagret.</p></div></section>
+<footer><span id="toolHint">Börja med att öppna en ritning.</span><span id="coords">—</span><span id="pageState">Ingen ritning</span></footer>
+</div>
+<input id="projectInput" type="file" accept=".json,.rrproject" hidden>
+<dialog id="modal"><div class="modal-head"><h2 id="modalTitle"></h2><button id="modalClose" class="square" aria-label="Stäng">×</button></div><div id="modalBody"></div></dialog>
+<div id="toast" role="status" aria-live="polite" hidden></div><div id="busy" role="status" hidden><div class="spinner"></div><strong id="busyText">Läser filen…</strong><span>Arbetet sker lokalt.</span></div>
+<noscript>JavaScript behöver vara aktiverat för att använda ritningsverktyget.</noscript>
+
+<script src="core/rr.js"></script>
+<script src="data/vehicles.js"></script>
+<script src="core/rs.js"></script>
+<script src="core/lc.js"></script>
+<script src="app.js"></script>
+
+
+
+
+</body></html>

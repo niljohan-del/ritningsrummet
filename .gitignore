@@ -1,3 +1,20 @@
-
-# Genererad av tools/build-korsparskontroll.mjs vid bygge
+# Byggresultat
+dist/
+node_modules/
+web/app/
 web/korspar.html
+
+# Arbetskataloger för lokala tester
+.serve*/
+
+# Baseline är 22 MB och behövs inte längre för att bygga — src/ och public/
+# är källan. Ligger kvar på disk som historisk referens.
+baseline/
+
+# Lokala testprojekt
+*.local.json
+.DS_Store
+Thumbs.db
+
+# Källan till welcome.webp; bara den omkodade versionen behöver checkas in
+public/assets/welcome.png

@@ -2,75 +2,83 @@
 
 Lokal granskning av ritningar för trafikplanering. Läser PDF, DXF och bilder,
 lägger egna lager ovanpå, kalibrerar skala, mäter längd och area, och testar
-körspår för typfordon enligt Trafikverkets VGU.
+körspår för typfordon enligt Trafikverkets VGU — stela såväl som ledade.
 
-Allt körs i webbläsaren på din egen dator. Ingen server, inga filer som lämnar
-maskinen.
+Ritningarna lämnar aldrig datorn.
 
 ## Använd verktyget
 
-Dubbelklicka **`dist/Ritningsrummet-3.6.1.html`**. Det är den version som ska
-användas — `baseline/Ritningsrummet-3.6.html` har ett fel i den automatiska
-skalavläsningen som kan föreslå en lutningsangivelse som skala.
+**På en dator där inget får installeras:** dubbelklicka
+`dist/Ritningsrummet-offline.html`. En enda fil, allt inbäddat, fungerar utan
+server och utan internet. Bygg den med `node tools/build-offline.mjs`.
 
-För ledbuss och påhängsvagn: dubbelklicka **`dist/korsparskontroll.html`**.
-Fristående sida som ritar körspår för ledade fordon och jämför mot den slutna
-formen. Behövs tills ledade fordon kopplats in i huvudverktyget.
+**På webben:** ritningsrummet.vercel.app — statussida, körspårskontroll och
+verktyget självt under `/app`.
 
-## Kör testerna
+## Bygg
 
-Kräver bara Node, inget `npm install`:
-
-```
-node --test "test/**/*.test.js"
-```
-
-93 tester på geometri, skalberäkning, DXF-tolkning och körspår, varav 29 på
-ledade fordon. Facit är analytiska formler, inte sparad utdata.
-
-## Bygg om
+Inga beroenden, bara Node.
 
 ```
-node tools/patch-baseline.mjs          # dist/Ritningsrummet-3.6.1.html
-node tools/build-korsparskontroll.mjs  # dist/korsparskontroll.html
+node tools/build-offline.mjs            # enfilsversion, 16,1 MB
+node tools/build-offline.mjs --slim     # utan CJK-teckentabeller, 14,7 MB
+node tools/build-web.mjs                # serverad version i web/app/
+node tools/build-korsparskontroll.mjs   # fristående körspårskontroll
+node --test "test/**/*.test.js"         # 93 tester
 ```
+
+Under utveckling: servera `src/` och `public/` tillsammans som en katalog.
 
 ## Mappar
 
 | Sökväg | Innehåll |
 |---|---|
-| `PLAN.md` | Projektplanen, etapper och öppna beslut. **Börja här.** |
-| `ARKITEKTUR.md` | Kartläggning av enfilsversionen och härledning av fordonsgeometrin |
+| `src/` | Källan. `index.html`, `styles.css`, fem skript som delar globalt scope |
 | `src/core/rr.js` | Geometri, DXF, skala, körspår och ledade fordon |
 | `src/data/vehicles.js` | Typfordon med källhänvisning per fordon |
-| `test/rr.test.js` | Geometri, skala, DXF, körspår för stela fordon |
-| `test/units.test.js` | Ledade fordon |
-| `tools/` | Byggskript och mall för kontrollsidan |
-| `baseline/` | Fryst utgångspunkt 3.6, referensen vi jämför mot |
-| `dist/` | Byggresultat. Återskapas, ligger inte i git. |
+| `public/vendor/` | pdf.js och Tesseract som riktiga filer |
+| `public/assets/` | Välkomstbilden som WebP |
+| `test/` | 93 tester mot analytiska facit |
+| `tools/` | Byggskript och engångsverktygen från migreringen |
+| `web/` | Det som publiceras |
+| `baseline/` | Fryst 3.6, historisk referens. Behövs inte för att bygga. |
 
-`src/` är ännu inte inkopplat i huvudverktyget — uppdelningen sker i etapp 3.
-Modulerna där är utbrutna för att kunna testas, och rättningar patchas in i
-enfilsversionen tills omstruktureringen är klar.
+## Hur koden hänger ihop
 
-## Arbetslägen i verktyget
+Appen är fem klassiska `<script>` som delar ett gemensamt globalt scope — inte
+ES-moduler. Det är avsiktligt bevarat från enfilsversionen: 164 funktioner
+delar variabler fritt, och att bryta isär scopet skulle göra dolda beroenden
+till fel. Uppdelningen flyttade koden ordagrant och ändrade bara tillgångs-
+lagret.
 
-- **Plan** — ritningsgranskning med lager, mått och körspår
-- **Pilbil** — manuell körning med ratt och växel, för att känna efter om ett fordon kommer runt
-- **Lark** — landskapsläge med symbolpalett
-- **Sektion** — gatusektioner byggda av band, med kontroll mot VGU
+Komponenterna hämtas genom `assetBytes` och `assetURL`. Finns en inbäddad
+base64-klump används den; annars hämtas filerna under `vendor/`. Samma kod
+klarar alltså båda byggena.
 
-Körspåren i huvudverktyget gäller tills vidare bara stela fordon. Ledbuss (Bl)
-och dragbil med påhängsvagn (Lps) är modellerade och testade, men ritas ännu
-bara av `korsparskontroll.html` — se etapp 2 i planen. Timmerbil (Ls) saknas
-eftersom geometrin inte finns publicerad.
+**Enfilsversionens CSP är hårdare än den serverades.** Offline-filen kör
+`default-src 'none'` utan `'self'` någonstans, eftersom ingenting ska hämtas.
+Den serverade versionen måste få hämta sina egna filer och har därför `'self'`
+tillagt. Se `tools/csp.mjs`.
+
+## Körspår
+
+Stela fordon följer en cykelmodell med RK4-integration; manövrer med konstant
+styrutslag löses i sluten form. Släpade enheter fästs av `attachUnits` på
+resultatet från samtliga fem körspårsvarianter, så ledade fordon fungerar lika
+i alla lägen.
+
+Avvikelse mot den slutna formen för stationär eftersläpning: 0,04 mm för
+ledbuss, 0,02 mm för påhängsvagn.
+
+Timmerbil (Ls) saknas: geometrin är inte publicerad, och ett verkligt
+timmerekipage är dollystyrt — tre kroppar, inte två. Modellen klarar kedjor av
+flera enheter, så Ls blir en datarad så snart måtten finns belagda.
 
 ## Licenser
 
-Verktyget använder pdf.js (Apache 2.0, Mozilla Foundation) och Tesseract med
-`tessdata_fast` (Apache 2.0). Licenstexterna ligger inbäddade i filen och ska
-följa med i alla bygg.
+pdf.js (Apache 2.0, Mozilla Foundation) och Tesseract med `tessdata_fast`
+(Apache 2.0). Licenstexterna följer med i alla bygg och visas i hjälpen.
 
-Fordonsmåtten är transkriberade ur Trafikverkets VGU, *Begrepp och grundvärden*,
-figur 2.2-6 och 2.2-10. `maxSteer` är en egen simuleringsantagande, inte ett
-VGU-värde.
+Fordonsmåtten är transkriberade ur Trafikverkets VGU, *Begrepp och
+grundvärden*, och projektrapport DETESS 1.0. `maxSteer` och `maxArticulation`
+är egna simuleringsantaganden, inte VGU-värden.

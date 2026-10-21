@@ -17,7 +17,7 @@ Skälet att göra det till ett projekt är att **161 KB i ett enda scope med 164
 funktioner har nått gränsen för vad som går att ändra säkert**, och att det
 inte fanns något sätt att testa matematiken separat från gränssnittet.
 
-Målet är inte att slutа leverera en enda fil. Målet är att **fortsätta leverera
+Målet är inte att sluta leverera en enda fil. Målet är att **fortsätta leverera
 en enda fil, byggd ur delar som går att testa.**
 
 ---
@@ -121,33 +121,42 @@ kartläggning ligger i `ARKITEKTUR.md`.
 **Etapp 1 — Testa `RR`. KLAR.**
 64 tester, ett fel hittat och rättat, körbart utan byggsteg.
 
-**Etapp 2 — Ledade fordon. MODELLEN KLAR, ÅTERSTÅR ATT KOPPLA IN I APPEN.**
+**Etapp 2 — Ledade fordon. KLAR.**
 `attachUnits` i `src/core/rr.js` fäster släpade enheter på resultatet från
 vilken som helst av de fem `simulate*`-varianterna, så ledade fordon fungerar
 lika i alla körspårslägen utan att någon av dem rörts. Bl och Lps finns i
 fordonslistan med belagd geometri.
 
-Vad som återstår: huvudappen ritar inte `frame.units` och känner inte till
-ledade fordon i fordonspanelen. Den ändringen ligger i de 161 KB som ska delas
-upp, och den görs när etapp 3 och 4 är på plats — att lägga in fordonen i
-gränssnittet nu skulle visa dem som stela dragbilar, vilket är sämre än att
-låta bli.
+Inkopplat i gränssnittet: `calculateSweep` fäster enheterna och `drawSweep`
+ritar dem i samma fyllnadsbana som dragfordonet, så överlappen inte mörknar.
+Verifierat i appen — stela fordon får inga enheter, Bl och Lps får sin
+släpvagn.
 
-Under tiden finns `dist/korsparskontroll.html` som fristående verktyg för just
-ledade körspår.
+**Etapp 3 — Bryt ut assets och dela upp filerna. KLAR.**
+Koden flyttades ordagrant till `src/`, tillgångarna till `public/`. Enda
+kodändringen är tillgångslagret, som nu klarar både inbäddat och hämtat.
 
-**Etapp 3 — Bryt ut assets och dela upp filerna**
-De två jätteraderna blir riktiga filer, och de fem script-blocken flyttas till
-egna filer ordagrant. `index.html` laddar dem i samma ordning.
+Två saker visade sig först när appen faktiskt kördes. CSS:en sträcker sig över
+flera rader, inte en — ett första försök hårdkodade radnummer och lade tyst
+halva stilmallen som löptext i markupen. Och enfilsversionen bär en hårdspänd
+CSP utan `'self'`, som blockerade allt utbrutet. Båda hittades av att jämföra
+renderingen mot baseline, inte av att läsa koden.
 
-**Etapp 4 — Byggsteg med Vite**
-Ger dev-server med direktuppdatering och single-file-bygget.
+**Etapp 4 — Byggsteg. KLAR, men inte med Vite.**
+Appen är fem klassiska skript som delar globalt scope, och en bundlare skulle
+skriva om just det. Inversen av uppdelningen är femtio rader utan beroenden och
+går att jämföra rakt mot baseline. `tools/build-offline.mjs` väver ihop filen
+igen och sätter tillbaka den strikta CSP:n.
 
-**Observera att etapp 3 och 4 är en enhet.** Så fort assets ligger som separata
-filer slutar verktyget fungera vid dubbelklick — Chrome blockerar `fetch` mot
-`file://`, och det är med stor sannolikhet just därför allt är base64-inbäddat
-från början. Det som gör filen körbar igen är single-file-bygget i etapp 4. Man
-kan alltså inte stanna mellan dem.
+Verifierat: baseline, serverad version och offline-fil ger identiskt resultat
+på inläst DXF — samma sidmått, samma skala och samma bläcktäckning på canvasen
+ned till andra decimalen.
+
+| Bygge | Storlek |
+|---|---|
+| baseline 3.6 | 22,10 MB |
+| offline, komplett | 16,15 MB |
+| offline, `--slim` utan CJK | 14,66 MB |
 
 **Etapp 5 — Dela upp huvudappen**
 161 KB blir moduler per arbetsläge (plan / sektion / lark / pilbil) plus

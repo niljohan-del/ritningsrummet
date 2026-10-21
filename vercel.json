@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "node tools/build-korsparskontroll.mjs web/korspar.html",
+  "buildCommand": "node tools/build-korsparskontroll.mjs web/korspar.html && node tools/build-web.mjs",
   "outputDirectory": "web",
   "installCommand": "echo inga beroenden",
   "framework": null,
