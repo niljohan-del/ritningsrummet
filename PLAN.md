@@ -270,3 +270,32 @@ skarp granskning.
 (framaxelföljning, riktningsuppdelning, exakt manöver, bågkedja, manuell
 körning), men överlappningen är värd en genomgång innan de flyttas. Jag har läst
 dem men inte slagit ihop något — det vore en ändring utan beställare.
+
+---
+
+## Vad som skiljer 3.7 från 3.6
+
+Appen online och offline-filen är **inte** identiska med den 3.6 du hade. Fyra
+avsiktliga skillnader, och ingenting borttaget:
+
+**Rättat fel i skalavläsningen.** `explicit` avgjordes av ett teckenfönster
+runt träffen i stället för av träffen själv, så en lutning som `1:20` kunde
+hamna först i förslagslistan när ordet `SKALA` fanns på annat håll i texten.
+Accepterat förslag gav mått med faktor 20 fel.
+
+**Ledade fordon tillagda.** Bl (ledbuss) och Lps (dragbil med påhängsvagn)
+finns i fordonslistan och ritas med sin släpade enhet. De tre tidigare
+fordonen är oförändrade.
+
+**Välkomstbilden omkodad** från PNG till WebP, kvalitet 80. Visuellt likvärdig,
+men tekniskt en annan bild — den är komprimerad med förlust.
+
+**Hjälptexten justerad** om var komponenterna kommer ifrån, eftersom den
+serverade versionen faktiskt hämtar dem över nätet. Offline-filen säger
+fortfarande att inget hämtas, vilket stämmer för den.
+
+Därutöver är tillgångslagret omskrivet och den serverade versionens CSP har
+`'self'` tillagt. Inget av det märks i användningen.
+
+Allt annat är ordagrant samma kod. Renderingen av en inläst DXF är kontrollerad
+mot 3.6 ned till canvasens pixlar.
